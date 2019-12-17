@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Wrangle",
+  "name": "Ring mail viewer and designer",
   "icons": [
     {
       "src": "favicon.ico",
