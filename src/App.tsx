@@ -1,67 +1,40 @@
 import React from 'react';
-import { Scene, PerspectiveCamera, WebGLRenderer, Mesh, TorusBufferGeometry, Color, AmbientLight, DirectionalLight, MeshPhongMaterial, DoubleSide } from "three";
-import { OrbitControls } from './OrbitControls';
+import { TorusBufferGeometry, PerspectiveCamera, Material, AmbientLight, DirectionalLight } from 'three';
+import Renderer from './render/Renderer';
+import Mesh from './render/Mesh';
+import { OrbitControls } from './render/OrbitControls';
+import useDisposeState from './render/useDisposeState';
+import MaterialPicker from './MaterialPicker';
+import RenderObj from './render/RenderObj';
 
 const App: React.FC = () => {
+  const [geometry1] = useDisposeState(() => new TorusBufferGeometry(10, 1, 16, 100));
+  const [geometry2] = useDisposeState(() => new TorusBufferGeometry(5, 3, 16, 100));
 
-  const bodyDiv = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const body = bodyDiv.current;
-    if (body) {
-      const scene = new Scene();
-      const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-      const ambientLight = new AmbientLight(0x333333);
-
-      const light = new DirectionalLight(0xFFFFFF, 1.0);
-
-      const materialColor = new Color();
-      materialColor.setRGB(1, 1, 1);
-
-      const flat = new MeshPhongMaterial({ color: materialColor, specular: 0x000000, side: DoubleSide });
-
-      const controls = new OrbitControls(camera, body);
-      controls.update();
-
-      const renderer = new WebGLRenderer();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.gammaInput = true;
-      renderer.gammaOutput = true;
-      const child = body.appendChild(renderer.domElement);
-
-      const geometry = new TorusBufferGeometry(10, 1, 16, 100);
-      const cube = new Mesh(geometry, flat);
-      scene.add(cube);
-      scene.add(ambientLight);
-      scene.add(light);
-
-      camera.position.z = 30;
-
-      let animateRequest: number | undefined;
-      const animate = function () {
-        animateRequest = requestAnimationFrame(animate);
-
-        controls.update();
-        renderer.render(scene, camera);
-      };
-
-      animate();
-
-      return () => {
-        if (animateRequest !== undefined) {
-          cancelAnimationFrame(animateRequest);
-        }
-        child.remove();
-        scene.dispose();
-        renderer.dispose();
-        geometry.dispose();
-      }
-    }
-  }, [bodyDiv]);
+  const [materials, setMaterials] = React.useState<(Material | undefined)[]>([undefined, undefined, undefined]);
 
   return (
-    <div ref={bodyDiv} />
+    <div>
+      {
+        materials.map((_, i) => <MaterialPicker key={i} materialUpdated={newMaterial => setMaterials(s => {
+          const newCopy = [...s];
+          newCopy[i] = newMaterial;
+          return newCopy;
+        })} />)
+      }
+      <Renderer height={800} width={800}
+        createCamera={(aspectRatio) => new PerspectiveCamera(75, aspectRatio, 0.1, 1000)}
+        createControls={(camera, canvas) => new OrbitControls(camera, canvas)}>
+        {renderTarget => <>
+          <Mesh material={materials[0]} geometry={geometry1} />
+          <Mesh material={materials[1]} geometry={geometry2} />
+          <RenderObj value={() => new AmbientLight(0x333333)} ></RenderObj>
+          <RenderObj value={() => new DirectionalLight(0xFFFFFF, 1.0)} ></RenderObj>
+          <canvas ref={renderTarget}></canvas>
+        </>
+        }
+      </Renderer>
+    </div>
   );
 }
 
